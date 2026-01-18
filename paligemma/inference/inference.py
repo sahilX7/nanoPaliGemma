@@ -39,9 +39,9 @@ def inference(
 ):
     # Get model inputs
     model_inputs = get_model_inputs(processor, prompt, image_path, device)
-    input_ids = model_inputs["input_ids"]
-    attention_mask = model_inputs["attention_mask"]
-    pixel_values = model_inputs["pixel_values"]
+    input_ids = model_inputs["input_ids"] # [Batch_Size, Seq_Len] where Batch_Size = 1
+    attention_mask = model_inputs["attention_mask"] # [Batch_Size, Seq_Len] where Batch_Size = 1
+    pixel_values = model_inputs["pixel_values"] # [Batch_Size, Num_Channels, Height, Width] where Batch_Size = 1
 
     # KV cache
     kv_cache = KVCache()
@@ -51,25 +51,28 @@ def inference(
 
     # Generate tokens
     for _ in range(max_tokens_to_generate):
+        # outputs shape: [Batch_Size, Seq_Length, Vocab_Size]
         outputs = model(
-            input_ids=input_ids,
-            pixel_values=pixel_values,
-            attention_mask=attention_mask,
+            input_ids=input_ids, # During prefill: [Batch_Size, Seq_Len], after that: [Batch_Size, 1]
+            pixel_values=pixel_values, # [Batch_Size, Num_Channels, Ht, Wd]
+            attention_mask=attention_mask, # During prefill: [Batch_Size, Seq_Len], after that: [Batch_Size, Seq_Len + k]
             kv_cache=kv_cache,
         )
+
         kv_cache = outputs["kv_cache"]
         next_token_logits = outputs["logits"][:, -1, :] # tensor([[0.70, ....., 5.20]]) Note: outputs["logits"] is a 3-dimensional tensor
         next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True) # tensor([[30871]])
-        next_token = next_token.squeeze(0)  # tensor([30871]) - Remove batch dimension 
+        next_token = next_token.squeeze(0)  # tensor([30871]) -> Remove batch dimension 
         generated_tokens.append(next_token)
 
         # Stop if the stop token has been generated
         if next_token.item() == stop_token:
             break
 
-        # Append the next token to the input
+        # Append the next token to the input_ids
         input_ids = next_token.unsqueeze(-1) # tensor([[30871]])
 
+        # Update the attention mask
         attention_mask = torch.cat(
             [attention_mask, torch.ones((1, 1), device=input_ids.device)], dim=-1
         )

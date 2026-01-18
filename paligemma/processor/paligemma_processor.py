@@ -8,10 +8,8 @@ import torch
 IMAGENET_STANDARD_MEAN = [0.5, 0.5, 0.5]
 IMAGENET_STANDARD_STD = [0.5, 0.5, 0.5]
 
-
 def prepend_image_tokens_to_prompt(prompt, bos_token, num_image_tokens, image_token):
     return f"{image_token * num_image_tokens}{bos_token}{prompt}\n"
-
 
 def resize(
     image: Image,
@@ -25,7 +23,6 @@ def resize(
     )
     return resized_image
 
-
 def rescale(
     image: np.ndarray, 
     scale: float, 
@@ -34,7 +31,6 @@ def rescale(
     rescaled_image = image * scale
     rescaled_image = rescaled_image.astype(dtype)
     return rescaled_image
-
 
 def normalize(
     image: np.ndarray,
@@ -45,7 +41,6 @@ def normalize(
     std = np.array(std, dtype=image.dtype)
     image = (image - mean) / std
     return image
-
 
 def process_images(
     images: List[Image.Image],
@@ -69,7 +64,6 @@ def process_images(
     images = [image.transpose(2, 0, 1) for image in images]
     
     return images
-
 
 class PaliGemmaProcessor:
     IMAGE_TOKEN = "<image>"
@@ -107,7 +101,7 @@ class PaliGemmaProcessor:
         )
 
         # Convert the list of numpy arrays to a single numpy array with shape [Batch_Size, Channels, Height, Width]
-        pixel_values = np.stack(pixel_values, axis=0)
+        pixel_values = np.stack(pixel_values, axis=0) # [img1, img2] -> [Batch_Size, Channels, Ht, Wd]
         
         # Convert the numpy array to a PyTorch tensor
         pixel_values = torch.tensor(pixel_values)
@@ -124,6 +118,8 @@ class PaliGemmaProcessor:
         ]
 
         # Get the input_ids and attention_mask as PyTorch tensors
+        # input_ids: tensor([[...]]) # Shape: (batch_size, seq_len) -> The batch_size supplied by us is 1
+        # attention_mask: tensor([[...]]) # Shape: (batch_size, seq_len)
         inputs = self.tokenizer(
             input_strings,
             return_tensors="pt",

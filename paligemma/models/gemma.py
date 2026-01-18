@@ -12,13 +12,13 @@ class KVCache():
         if len(self.key_cache) == 0:
             return 0
         else:
-            # Shape of key_cache: [Batch_Size, Num_Heads_KV, Seq_Len, Head_Dim]
+            # Shape of an item in key_cache: [Batch_Size, Num_Heads_KV, Seq_Len, Head_Dim]
             return self.key_cache[0].shape[-2]
 
     def update(
         self,
-        key_states: torch.Tensor,
-        value_states: torch.Tensor,
+        key_states: torch.Tensor, # Shape: [Batch_Size, Num_Heads_KV, Seq_Len, Head_Dim]
+        value_states: torch.Tensor, # Shape: [Batch_Size, Num_Heads_KV, Seq_Len, Head_Dim]
         layer_idx: int
     ):
         if len(self.key_cache) <= layer_idx:
@@ -49,15 +49,15 @@ class GemmaConfig():
         **kwargs
     ):
         super().__init__()
-        self.hidden_size = hidden_size
-        self.intermediate_size = intermediate_size
-        self.num_attention_heads = num_attention_heads
-        self.num_hidden_layers = num_hidden_layers
-        self.num_key_value_heads = num_key_value_heads
-        self.vocab_size = vocab_size
-        self.rms_norm_eps = rms_norm_eps
-        self.head_dim = head_dim
-        self.rope_theta = rope_theta
+        self.hidden_size = hidden_size # Size of embedding vector
+        self.intermediate_size = intermediate_size # Hidden layer size in MLP
+        self.num_attention_heads = num_attention_heads # Number of attention heads
+        self.num_hidden_layers = num_hidden_layers # Number of decoder layers
+        self.num_key_value_heads = num_key_value_heads # Number of KV heads
+        self.vocab_size = vocab_size # Size of vocabulary
+        self.rms_norm_eps = rms_norm_eps # Required for RMS Norm
+        self.head_dim = head_dim # The dimension of single head in GPQA
+        self.rope_theta = rope_theta # Required for RoPE
 
 class GemmaRMSNorm(nn.Module):
     def __init__(self, dim: int, eps: float = 1e-6):
@@ -70,7 +70,6 @@ class GemmaRMSNorm(nn.Module):
 
     def forward(self, x: torch.Tensor):
         output = self._norm(x.float())
-        # Llama does x.to(float16) * w whilst Gemma is (x * w).to(float16). See https://github.com/huggingface/transformers/pull/29402
         output = output * (1.0 + self.weight.float())
         return output.type_as(x)
 
@@ -85,7 +84,7 @@ class GemmaRotaryEmbedding(nn.Module):
         inv_freq = 1.0 / (self.base ** (torch.arange(0, self.dim, 2, dtype=torch.int64).float() / self.dim))
         self.register_buffer("inv_freq", tensor=inv_freq, persistent=False)
 
-    def forward(self, position_ids: torch.Tensor, dtype: torch.dtype):       
+    def forward(self, position_ids: torch.Tensor, dtype: torch.dtype):
         # Copy the inv_freq tensor for batch: inv_freq: [Head_Dim // 2], inv_freq_expanded: [Batch_Size, Head_Dim // 2, 1]
         inv_freq_expanded = self.inv_freq[None, :, None].float().expand(position_ids.shape[0], -1, 1)
         # position_ids_expanded: [Batch_Size, 1, Seq_Len]
@@ -187,7 +186,7 @@ class GemmaAttention(nn.Module):
         if kv_cache is not None:
             key_states, value_states = kv_cache.update(key_states, value_states, self.layer_idx)
 
-        # Repeat the keys and values to match the number of heads of the query 
+        # Repeat the keys and values to match the number of heads of query 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
         
@@ -308,9 +307,9 @@ class GemmaForCausalLM(nn.Module):
 
     def forward(
         self,
-        attention_mask: torch.Tensor,
-        position_ids: torch.Tensor,
-        input_embeds: torch.Tensor,
+        attention_mask: torch.Tensor, # During prefill: [Batch_Size, Num_Heads_Q, Seq_Len, Seq_Len], after that: [Batch_Size, Num_Heads_Q, 1, Seq_Len + k]
+        position_ids: torch.Tensor, # During prefill: [Batch_Size, Seq_Len], after that: [Batch_Size, 1]
+        input_embeds: torch.Tensor, # During prefill: [Batch_Size, Seq_Len, Embed_Dim], after that: [Batch_Size, 1, Embed_Dim]
         kv_cache: KVCache
     ):
         # [Batch_Size, Seq_Len, Hidden_Size] -> [Batch_Size, Seq_Len, Hidden_Size]

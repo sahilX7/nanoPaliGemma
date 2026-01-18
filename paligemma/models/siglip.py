@@ -18,15 +18,15 @@ class SiglipVisionConfig:
     ):
         super().__init__()
 
-        self.hidden_size = hidden_size
-        self.intermediate_size = intermediate_size
-        self.num_attention_heads = num_attention_heads
-        self.num_hidden_layers = num_hidden_layers
-        self.num_image_tokens = num_image_tokens # For creating object of paligemma processor
-        self.patch_size = patch_size
-        self.num_channels = num_channels
-        self.image_size = image_size
-        self.layer_norm_eps = layer_norm_eps
+        self.hidden_size = hidden_size # Dimension of embedding vector for each token
+        self.intermediate_size = intermediate_size # Hidden layer size for MLP 
+        self.num_attention_heads = num_attention_heads # Number of attention heads
+        self.num_hidden_layers = num_hidden_layers # Number of encoder blocks
+        self.num_image_tokens = num_image_tokens # For creating object of paligemma processor 
+        self.patch_size = patch_size # Size of convolutional filter
+        self.num_channels = num_channels # Number of image channels
+        self.image_size = image_size # Size of image
+        self.layer_norm_eps = layer_norm_eps # For layer normalization
 
 class SiglipVisionEmbeddings(nn.Module):
     def __init__(self, config: SiglipVisionConfig):
