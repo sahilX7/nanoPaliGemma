@@ -32,7 +32,7 @@ The process begins with the **SigLIP** (Sigmoid Loss for Language Image Pre-Trai
 * **Output:** The result is a sequence of high-dimensional image feature vectors, representing the visual semantic content of the image.
 
 ### 2. Multi-Modal Projector
-This component acts as the "bridge" or "connector" between the vision tower and the language model. Because the dimension of the SigLIP output (e.g., 1152) differs from the embedding dimension expected by the Gemma decoder (e.g., 2048), a projection is necessary.
+This component acts as the bridge between the vision tower and the language model. Because the dimension of the SigLIP output (e.g., 1152) differs from the embedding dimension expected by the Gemma decoder (e.g., 2048), a projection is necessary.
 
 * **Linear Projection:** The architecture typically uses a simple Linear layer to map the image features into the text embedding space.
 
@@ -43,7 +43,7 @@ This component acts as the "bridge" or "connector" between the vision tower and 
 ### 3. Gemma Decoder (Text Generation)
 The final stage utilizes the Gemma Causal Language Model, a decoder-only Transformer.
 
-* **Input Fusion:** The projected image tokens are concatenated with the text input tokens (e.g., the prompt). The sequence order is typically [Image Tokens, Text Tokens].
+* **Input Fusion:** The projected image tokens are concatenated with the text input tokens (e.g., the prompt). The sequence order is [Image Tokens, Text Tokens].
 
 * **Embedding & Normalization:** The text tokens are passed through the model's embedding layer. The combined sequence (image + text embeddings) is normalized.
 
@@ -53,7 +53,7 @@ The final stage utilizes the Gemma Causal Language Model, a decoder-only Transfo
 
 * **Logits & Generation:** The output of the final layer is projected to the vocabulary size to produce logits. The model then samples the next token iteratively until an `<eos>` token is generated or the max length is reached.
 
-| ![Alt Text](assets/paligemma.png) |
+![Alt Text](assets/paligemma.png) 
 *PaliGemma Architecture*
 
 ---
@@ -171,6 +171,7 @@ nanoPaliGemma/
 ├── test_images/                   # Directory for input images
 ├── venv/                          # Virtual environment
 ├── weights/                       # Place downloaded model weights here (Excluded from git)
+├── .gitignore                     # gitignore 
 ├── main.py                        # Entry point for the application
 └── requirements.txt               # Python dependencies
 └── README.md                      # Project documentation
@@ -182,10 +183,10 @@ nanoPaliGemma/
 ## ⚠️ Limitations
 
 * **Inference Only:** This repository currently supports forward pass (inference). Backpropagation (training) logic is not yet implemented.
-* **Single Image:** The current processor implementation supports single-image prompts.
+* **Single Image:** The current implementation supports single-image prompts.
 ---
 
 ## 📜 Acknowledgements
 
-* **Research:** Based on *PaliGemma: A Versatile 3B VLM for Transfer* by Google DeepMind.
+* **Research:** Based on [*PaliGemma: A Versatile 3B VLM for Transfer*](https://arxiv.org/abs/2407.07726) by Google DeepMind.
 * **References:** Architecture logic inspired by the official [PaliGemma](https://github.com/huggingface/transformers/tree/main/src/transformers/models/paligemma), [SigLIP](https://github.com/huggingface/transformers/tree/main/src/transformers/models/siglip) and [Gemma](https://github.com/huggingface/transformers/tree/main/src/transformers/models/gemma) implementations.
